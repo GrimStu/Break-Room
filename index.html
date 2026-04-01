@@ -704,14 +704,38 @@ function initCanvasDrag() {
   canvas.addEventListener('touchend', () => { dragging = null; });
 }
 
+function wrapText(ctx, text, maxWidth) {
+  // Split by user newlines first, then wrap each line by word
+  const paragraphs = text.split('\n');
+  const result = [];
+  for (const para of paragraphs) {
+    if (!para.trim()) { result.push(''); continue; }
+    const words = para.split(' ');
+    let current = '';
+    for (const word of words) {
+      const test = current ? current + ' ' + word : word;
+      if (ctx.measureText(test).width > maxWidth && current) {
+        result.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) result.push(current);
+  }
+  return result;
+}
+
 function drawMultilineText(ctx, text, x, y, fontSize, lineHeight) {
-  const lines = text.split('\n');
+  const maxWidth = canvasW * 0.88;
+  const lines = wrapText(ctx, text, maxWidth);
   const totalH = (lines.length - 1) * lineHeight;
   lines.forEach((line, i) => {
     const ly = y - totalH / 2 + i * lineHeight;
     ctx.strokeText(line, x, ly);
     ctx.fillText(line, x, ly);
   });
+  return lines.length;
 }
 
 function drawMeme() {
