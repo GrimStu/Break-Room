@@ -466,8 +466,20 @@
           <input type="range" id="font-size" min="20" max="80" value="40" oninput="drawMeme()">
         </div>
       </div>
+      <div class="meme-options" style="margin-top:4px;">
+        <div class="meme-option">
+          <label>Line 1 Angle</label>
+          <input type="range" id="rotate-1" min="-45" max="45" value="0" oninput="updateRotateLabel(0);drawMeme()">
+          <span id="rotate-1-val" style="font-size:0.75rem;color:var(--muted);">0°</span>
+        </div>
+        <div class="meme-option">
+          <label>Line 2 Angle</label>
+          <input type="range" id="rotate-2" min="-45" max="45" value="0" oninput="updateRotateLabel(1);drawMeme()">
+          <span id="rotate-2-val" style="font-size:0.75rem;color:var(--muted);">0°</span>
+        </div>
+      </div>
 
-      <p style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;">💡 Drag either line of text to reposition it anywhere on the image</p>
+      <p style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;">💡 Drag text to reposition · Use angle sliders to tilt · Press Enter in the text box for a new line</p>
       <canvas id="meme-canvas" width="600" height="400" style="cursor:grab;"></canvas>
 
       <div class="meme-btn-row">
@@ -766,6 +778,11 @@ function drawMeme() {
   ctx.fillStyle    = textColor;
   ctx.lineJoin     = 'round';
 
+  const rotations = [
+    parseInt(document.getElementById('rotate-1').value) * Math.PI / 180,
+    parseInt(document.getElementById('rotate-2').value) * Math.PI / 180,
+  ];
+
   const lineHeight = fontSize * 1.15;
   const texts = [topText, bottomText];
 
@@ -773,11 +790,17 @@ function drawMeme() {
     if (!text.trim()) return;
     const x = textPos[i].x * canvasW;
     const y = textPos[i].y * canvasH;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotations[i]);
+    ctx.translate(-x, -y);
+
     drawMultilineText(ctx, text, x, y, fontSize, lineHeight);
 
     // Drag highlight
     if (dragging === i) {
-      const lines = text.split('\n');
+      const lines = wrapText(ctx, text, canvasW * 0.88);
       const blockH = lines.length * lineHeight;
       ctx.save();
       ctx.strokeStyle = 'rgba(245,200,66,0.7)';
@@ -786,6 +809,8 @@ function drawMeme() {
       ctx.strokeRect(x - canvasW * 0.44, y - blockH / 2 - 4, canvasW * 0.88, blockH + 8);
       ctx.restore();
     }
+
+    ctx.restore();
   });
 }
 
@@ -813,12 +838,22 @@ function downloadMeme() {
   showToast('Meme downloaded! 🎉');
 }
 
+function updateRotateLabel(index) {
+  const id = index === 0 ? 'rotate-1' : 'rotate-2';
+  const val = document.getElementById(id).value;
+  document.getElementById(id + '-val').textContent = val + '°';
+}
+
 function resetMeme() {
   document.getElementById('top-text').value    = '';
   document.getElementById('bottom-text').value = '';
   document.getElementById('font-size').value   = 40;
   document.getElementById('text-color').value  = '#ffffff';
   document.getElementById('outline-color').value = '#000000';
+  document.getElementById('rotate-1').value = 0;
+  document.getElementById('rotate-2').value = 0;
+  document.getElementById('rotate-1-val').textContent = '0°';
+  document.getElementById('rotate-2-val').textContent = '0°';
   resetTextPositions();
   if (selectedImage) drawMeme();
 }
