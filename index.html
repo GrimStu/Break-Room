@@ -217,6 +217,23 @@
     font-size: 0.72rem; color: var(--muted);
     font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
   }
+  .swatch-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .swatch {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .swatch:hover { transform: scale(1.15); }
+  .swatch.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(245,200,66,0.4); transform: scale(1.15); }
+
   .meme-option input[type=color] {
     width: 44px; height: 32px;
     border: 1px solid var(--border);
@@ -491,13 +508,23 @@
       </div>
 
       <div class="meme-options">
-        <div class="meme-option">
-          <label>Text Colour</label>
-          <input type="color" id="text-color" value="#ffffff" oninput="drawMeme()">
+        <div class="meme-option" style="width:100%;">
+          <label>Line 1 Text Colour</label>
+          <div class="swatch-row" id="text-color-1-swatches"></div>
         </div>
-        <div class="meme-option">
-          <label>Outline</label>
-          <input type="color" id="outline-color" value="#000000" oninput="drawMeme()">
+        <div class="meme-option" style="width:100%;">
+          <label>Line 1 Outline Colour</label>
+          <div class="swatch-row" id="outline-color-1-swatches"></div>
+        </div>
+      </div>
+      <div class="meme-options" style="margin-top:0;">
+        <div class="meme-option" style="width:100%;">
+          <label>Line 2 Text Colour</label>
+          <div class="swatch-row" id="text-color-2-swatches"></div>
+        </div>
+        <div class="meme-option" style="width:100%;">
+          <label>Line 2 Outline Colour</label>
+          <div class="swatch-row" id="outline-color-2-swatches"></div>
         </div>
       </div>
       <div class="meme-options" style="margin-top:0;">
@@ -667,6 +694,43 @@ let dragOffset = { x: 0, y: 0 };
 let canvasW = 1, canvasH = 1;
 let textPos = [{ x: 0.5, y: 0.08 }, { x: 0.5, y: 0.92 }];
 
+// Per-line colour state
+const lineColors = [
+  { text: '#ffffff', outline: '#000000' },
+  { text: '#ffffff', outline: '#000000' },
+];
+
+const SWATCHES = [
+  '#ffffff','#000000','#f5c842','#e8563a','#4ecdc4',
+  '#ff6b9d','#56c596','#4a90d9','#ff9f43','#a29bfe',
+  '#fd79a8','#2d3436',
+];
+
+function buildSwatches() {
+  [0, 1].forEach(i => {
+    ['text', 'outline'].forEach(type => {
+      const containerId = `${type}-color-${i+1}-swatches`;
+      const container = document.getElementById(containerId);
+      const defaultCol = type === 'text' ? '#ffffff' : '#000000';
+      container.innerHTML = SWATCHES.map(col => `
+        <div class="swatch ${lineColors[i][type] === col ? 'active' : ''}"
+          style="background:${col};${col === '#ffffff' ? 'border-color:#555;' : ''}"
+          onclick="setColor(${i},'${type}','${col}',this)"
+          title="${col}">
+        </div>`).join('');
+    });
+  });
+}
+
+function setColor(lineIndex, type, color, el) {
+  lineColors[lineIndex][type] = color;
+  // Update active state on swatches for this row
+  const containerId = `${type}-color-${lineIndex+1}-swatches`;
+  document.querySelectorAll(`#${containerId} .swatch`).forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  drawMeme();
+}
+
 function resetTextPositions() {
   textPos = [{ x: 0.5, y: 0.08 }, { x: 0.5, y: 0.92 }];
 }
@@ -807,8 +871,6 @@ function drawMeme() {
   const ctx = canvas.getContext('2d');
   const topText    = (document.getElementById('top-text').value || '').toUpperCase();
   const bottomText = (document.getElementById('bottom-text').value || '').toUpperCase();
-  const textColor  = document.getElementById('text-color').value;
-  const outlineColor = document.getElementById('outline-color').value;
   const fontSizes  = [
     parseInt(document.getElementById('font-size-1').value),
     parseInt(document.getElementById('font-size-2').value),
@@ -820,8 +882,7 @@ function drawMeme() {
   canvasH = Math.round(selectedImage.height * scale);
   canvas.width = canvasW; canvas.height = canvasH;
   ctx.drawImage(selectedImage, 0, 0, canvasW, canvasH);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.strokeStyle = outlineColor; ctx.fillStyle = textColor; ctx.lineJoin = 'round';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
   const rotations = [
     parseInt(document.getElementById('rotate-1').value) * Math.PI / 180,
     parseInt(document.getElementById('rotate-2').value) * Math.PI / 180,
@@ -832,6 +893,8 @@ function drawMeme() {
     const lineHeight = fontSize * 1.15;
     ctx.font = `${fontSize}px Impact, Arial Black, sans-serif`;
     ctx.lineWidth = Math.max(2, fontSize / 9);
+    ctx.strokeStyle = lineColors[i].outline;
+    ctx.fillStyle   = lineColors[i].text;
     const x = textPos[i].x * canvasW;
     const y = textPos[i].y * canvasH;
     ctx.save();
@@ -882,9 +945,10 @@ function resetMeme() {
   document.getElementById('top-text').value = '';
   document.getElementById('bottom-text').value = '';
   ['font-size-1','font-size-2'].forEach(id => { document.getElementById(id).value = 40; document.getElementById(id+'-val').textContent = '40'; });
-  document.getElementById('text-color').value = '#ffffff';
-  document.getElementById('outline-color').value = '#000000';
   ['rotate-1','rotate-2'].forEach(id => { document.getElementById(id).value = 0; document.getElementById(id+'-val').textContent = '0°'; });
+  lineColors[0] = { text: '#ffffff', outline: '#000000' };
+  lineColors[1] = { text: '#ffffff', outline: '#000000' };
+  buildSwatches();
   resetTextPositions();
   if (selectedImage) drawMeme();
 }
@@ -1134,6 +1198,7 @@ function setJokePrompt() {
 
 buildTemplateGrid();
 initCanvasDrag();
+buildSwatches();
 setJokePrompt();
 </script>
 </body>
