@@ -701,8 +701,8 @@ function initCanvasDrag() {
     e.preventDefault();
   });
 
-  canvas.addEventListener('mouseup',    () => { dragging = null; canvas.style.cursor = 'grab'; });
-  canvas.addEventListener('mouseleave', () => { dragging = null; canvas.style.cursor = 'grab'; });
+  canvas.addEventListener('mouseup',    () => { dragging = null; canvas.style.cursor = 'grab'; drawMeme(); });
+  canvas.addEventListener('mouseleave', () => { dragging = null; canvas.style.cursor = 'grab'; drawMeme(); });
 
   canvas.addEventListener('touchstart', (e) => {
     if (!selectedImage) return;
@@ -720,7 +720,7 @@ function initCanvasDrag() {
     e.preventDefault();
   }, { passive: false });
 
-  canvas.addEventListener('touchend', () => { dragging = null; });
+  canvas.addEventListener('touchend', () => { dragging = null; drawMeme(); });
 }
 
 function wrapText(ctx, text, maxWidth) {
