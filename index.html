@@ -217,6 +217,36 @@
     font-size: 0.72rem; color: var(--muted);
     font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
   }
+  .line-panel {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .line-toggle {
+    width: 100%;
+    background: var(--surface2);
+    border: none;
+    color: var(--text);
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+  }
+  .line-toggle:hover { background: #2a2a3a; }
+  .line-toggle-arrow { color: var(--accent); font-size: 0.75rem; transition: transform 0.2s; }
+  .line-toggle-arrow.open { transform: rotate(180deg); }
+  .line-body {
+    padding: 14px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
   .swatch-row {
     display: flex;
     flex-wrap: wrap;
@@ -507,48 +537,59 @@
         </div>
       </div>
 
-      <div class="meme-options">
-        <div class="meme-option" style="width:100%;">
-          <label>Line 1 Text Colour</label>
-          <div class="swatch-row" id="text-color-1-swatches"></div>
-        </div>
-        <div class="meme-option" style="width:100%;">
-          <label>Line 1 Outline Colour</label>
-          <div class="swatch-row" id="outline-color-1-swatches"></div>
-        </div>
-      </div>
-      <div class="meme-options" style="margin-top:0;">
-        <div class="meme-option" style="width:100%;">
-          <label>Line 2 Text Colour</label>
-          <div class="swatch-row" id="text-color-2-swatches"></div>
-        </div>
-        <div class="meme-option" style="width:100%;">
-          <label>Line 2 Outline Colour</label>
-          <div class="swatch-row" id="outline-color-2-swatches"></div>
-        </div>
-      </div>
-      <div class="meme-options" style="margin-top:0;">
-        <div class="meme-option">
-          <label>Line 1 Size</label>
-          <input type="range" id="font-size-1" min="12" max="80" value="40" oninput="updateSizeLabel(0);drawMeme()">
-          <span id="font-size-1-val" style="font-size:0.75rem;color:var(--muted);">40</span>
-        </div>
-        <div class="meme-option">
-          <label>Line 2 Size</label>
-          <input type="range" id="font-size-2" min="12" max="80" value="40" oninput="updateSizeLabel(1);drawMeme()">
-          <span id="font-size-2-val" style="font-size:0.75rem;color:var(--muted);">40</span>
+      <!-- Line 1 collapsible -->
+      <div class="line-panel">
+        <button class="line-toggle" onclick="toggleLine(1)">
+          <span>✏️ Line 1 Options</span>
+          <span class="line-toggle-arrow" id="arrow-1">▼</span>
+        </button>
+        <div class="line-body" id="line-body-1" style="display:none;">
+          <div class="meme-option" style="width:100%;margin-bottom:10px;">
+            <label>Text Colour</label>
+            <div class="swatch-row" id="text-color-1-swatches"></div>
+          </div>
+          <div class="meme-option" style="width:100%;margin-bottom:10px;">
+            <label>Outline Colour</label>
+            <div class="swatch-row" id="outline-color-1-swatches"></div>
+          </div>
+          <div class="meme-option" style="margin-bottom:6px;">
+            <label>Size</label>
+            <input type="range" id="font-size-1" min="12" max="80" value="40" oninput="updateSizeLabel(0);drawMeme()">
+            <span id="font-size-1-val" style="font-size:0.75rem;color:var(--muted);">40</span>
+          </div>
+          <div class="meme-option">
+            <label>Angle</label>
+            <input type="range" id="rotate-1" min="-45" max="45" value="0" oninput="updateRotateLabel(0);drawMeme()">
+            <span id="rotate-1-val" style="font-size:0.75rem;color:var(--muted);">0°</span>
+          </div>
         </div>
       </div>
-      <div class="meme-options" style="margin-top:0;">
-        <div class="meme-option">
-          <label>Line 1 Angle</label>
-          <input type="range" id="rotate-1" min="-45" max="45" value="0" oninput="updateRotateLabel(0);drawMeme()">
-          <span id="rotate-1-val" style="font-size:0.75rem;color:var(--muted);">0°</span>
-        </div>
-        <div class="meme-option">
-          <label>Line 2 Angle</label>
-          <input type="range" id="rotate-2" min="-45" max="45" value="0" oninput="updateRotateLabel(1);drawMeme()">
-          <span id="rotate-2-val" style="font-size:0.75rem;color:var(--muted);">0°</span>
+
+      <!-- Line 2 collapsible -->
+      <div class="line-panel">
+        <button class="line-toggle" onclick="toggleLine(2)">
+          <span>✏️ Line 2 Options</span>
+          <span class="line-toggle-arrow" id="arrow-2">▼</span>
+        </button>
+        <div class="line-body" id="line-body-2" style="display:none;">
+          <div class="meme-option" style="width:100%;margin-bottom:10px;">
+            <label>Text Colour</label>
+            <div class="swatch-row" id="text-color-2-swatches"></div>
+          </div>
+          <div class="meme-option" style="width:100%;margin-bottom:10px;">
+            <label>Outline Colour</label>
+            <div class="swatch-row" id="outline-color-2-swatches"></div>
+          </div>
+          <div class="meme-option" style="margin-bottom:6px;">
+            <label>Size</label>
+            <input type="range" id="font-size-2" min="12" max="80" value="40" oninput="updateSizeLabel(1);drawMeme()">
+            <span id="font-size-2-val" style="font-size:0.75rem;color:var(--muted);">40</span>
+          </div>
+          <div class="meme-option">
+            <label>Angle</label>
+            <input type="range" id="rotate-2" min="-45" max="45" value="0" oninput="updateRotateLabel(1);drawMeme()">
+            <span id="rotate-2-val" style="font-size:0.75rem;color:var(--muted);">0°</span>
+          </div>
         </div>
       </div>
 
@@ -929,7 +970,21 @@ function downloadMeme() {
   link.download = 'meme.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
+  clearMemeText();
   showToast('Meme downloaded! 🎉');
+}
+
+function toggleLine(n) {
+  const body = document.getElementById(`line-body-${n}`);
+  const arrow = document.getElementById(`arrow-${n}`);
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  arrow.classList.toggle('open', !isOpen);
+}
+
+function clearMemeText() {
+  document.getElementById('top-text').value = '';
+  document.getElementById('bottom-text').value = '';
 }
 
 function updateSizeLabel(i) {
@@ -948,6 +1003,10 @@ function resetMeme() {
   ['rotate-1','rotate-2'].forEach(id => { document.getElementById(id).value = 0; document.getElementById(id+'-val').textContent = '0°'; });
   lineColors[0] = { text: '#ffffff', outline: '#000000' };
   lineColors[1] = { text: '#ffffff', outline: '#000000' };
+  [1,2].forEach(n => {
+    document.getElementById(`line-body-${n}`).style.display = 'none';
+    document.getElementById(`arrow-${n}`).classList.remove('open');
+  });
   buildSwatches();
   resetTextPositions();
   if (selectedImage) drawMeme();
@@ -1020,6 +1079,7 @@ async function submitToHall() {
     if (!putRes.ok) throw new Error('Save failed');
 
     closeShareModal();
+    clearMemeText();
     showToast('🏆 Added to the Hall of Memes!');
 
   } catch (err) {
