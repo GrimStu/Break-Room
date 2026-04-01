@@ -635,7 +635,7 @@
 <div class="modal-overlay" id="share-modal">
   <div class="modal-box">
     <h3>🏆 Share to Hall of Memes</h3>
-    <p>Add your name so the team knows who made this masterpiece.</p>
+    <p>Add your name so the group knows who made this masterpiece.</p>
     <input type="text" class="modal-input" id="creator-name" placeholder="Your name (optional)" maxlength="30">
     <div class="modal-btn-row">
       <button class="btn btn-hall" id="confirm-share-btn" onclick="submitToHall()">Share It! 🚀</button>
@@ -970,7 +970,7 @@ function downloadMeme() {
   link.download = 'meme.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
-  clearMemeText();
+  resetMeme();
   showToast('Meme downloaded! 🎉');
 }
 
@@ -1079,7 +1079,7 @@ async function submitToHall() {
     if (!putRes.ok) throw new Error('Save failed');
 
     closeShareModal();
-    clearMemeText();
+    resetMeme();
     showToast('🏆 Added to the Hall of Memes!');
 
   } catch (err) {
