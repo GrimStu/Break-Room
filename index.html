@@ -33,7 +33,7 @@
   header {
     background: linear-gradient(135deg, #1a1a24 0%, #12121a 100%);
     border-bottom: 2px solid var(--accent);
-    padding: 28px 32px 20px;
+    padding: 18px 20px 14px;
     display: flex;
     align-items: center;
     gap: 16px;
@@ -56,9 +56,7 @@
   .tabs {
     display: flex;
     gap: 0;
-    padding: 0 32px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
   }
   .tab-btn {
     padding: 14px 28px;
@@ -80,7 +78,7 @@
   }
 
   /* ── Main ── */
-  main { padding: 32px; max-width: 900px; margin: 0 auto; }
+  main { padding: 16px 20px; max-width: 100%; margin: 0 auto; }
 
   .panel { display: none; }
   .panel.active { display: block; }
@@ -494,7 +492,8 @@
         </div>
       </div>
 
-      <canvas id="meme-canvas" width="600" height="400"></canvas>
+      <p style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;">💡 Drag either line of text to reposition it anywhere on the image</p>
+      <canvas id="meme-canvas" width="600" height="400" style="cursor:grab;"></canvas>
 
       <div class="meme-btn-row">
         <button class="btn btn-primary" onclick="downloadMeme()">⬇️ Download Meme</button>
@@ -609,6 +608,16 @@ const TEMPLATES = [
 let selectedImage = null;
 let selectedTemplateIndex = null;
 
+// Text label positions (as fractions 0-1 of canvas size)
+let textPos = [
+  { x: 0.5, y: 0.08 },  // line 1
+  { x: 0.5, y: 0.92 },  // line 2
+];
+
+// Drag state
+let dragging = null;  // index of text being dragged, or null
+let dragOffset = { x: 0, y: 0 };
+
 function buildTemplateGrid() {
   const grid = document.getElementById('template-grid');
   grid.innerHTML = TEMPLATES.map((t, i) => `
@@ -629,11 +638,11 @@ function selectTemplate(index) {
   img.crossOrigin = 'anonymous';
   img.onload = () => {
     selectedImage = img;
+    resetTextPositions();
     showEditor();
     drawMeme();
   };
   img.onerror = () => {
-    // fallback: draw placeholder
     selectedImage = null;
     showEditor();
     drawMemePlaceholder(TEMPLATES[index].name);
@@ -644,7 +653,6 @@ function selectTemplate(index) {
 function handleUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
@@ -652,6 +660,7 @@ function handleUpload(event) {
       selectedImage = img;
       selectedTemplateIndex = null;
       document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+      resetTextPositions();
       showEditor();
       drawMeme();
     };
@@ -660,9 +669,89 @@ function handleUpload(event) {
   reader.readAsDataURL(file);
 }
 
+function resetTextPositions() {
+  textPos = [
+    { x: 0.5, y: 0.08 },
+    { x: 0.5, y: 0.92 },
+  ];
+}
+
 function showEditor() {
   document.getElementById('meme-editor').style.display = 'block';
   document.getElementById('meme-editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  initCanvasDrag();
+}
+
+function getCanvasPos(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY,
+  };
+}
+
+function hitTestText(pos, canvas) {
+  const fontSize = parseInt(document.getElementById('font-size').value);
+  const hitRadius = fontSize * 1.2;
+  for (let i = 0; i < textPos.length; i++) {
+    const tx = textPos[i].x * canvas.width;
+    const ty = textPos[i].y * canvas.height;
+    if (Math.abs(pos.x - tx) < canvas.width * 0.45 && Math.abs(pos.y - ty) < hitRadius) {
+      return i;
+    }
+  }
+  return null;
+}
+
+function initCanvasDrag() {
+  const canvas = document.getElementById('meme-canvas');
+  // Remove old listeners by cloning
+  const fresh = canvas.cloneNode(true);
+  canvas.parentNode.replaceChild(fresh, canvas);
+  const c = document.getElementById('meme-canvas');
+
+  function onDown(e) {
+    const pos = getCanvasPos(e, c);
+    const hit = hitTestText(pos, c);
+    if (hit !== null) {
+      dragging = hit;
+      dragOffset.x = pos.x - textPos[hit].x * c.width;
+      dragOffset.y = pos.y - textPos[hit].y * c.height;
+      c.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+  }
+  function onMove(e) {
+    if (dragging === null) return;
+    const pos = getCanvasPos(e, c);
+    textPos[dragging].x = Math.min(1, Math.max(0, (pos.x - dragOffset.x) / c.width));
+    textPos[dragging].y = Math.min(1, Math.max(0, (pos.y - dragOffset.y) / c.height));
+    drawMeme();
+    e.preventDefault();
+  }
+  function onUp() {
+    dragging = null;
+    c.style.cursor = 'grab';
+  }
+
+  c.addEventListener('mousedown', onDown);
+  c.addEventListener('mousemove', onMove);
+  c.addEventListener('mouseup', onUp);
+  c.addEventListener('mouseleave', onUp);
+  c.addEventListener('touchstart', onDown, { passive: false });
+  c.addEventListener('touchmove', onMove, { passive: false });
+  c.addEventListener('touchend', onUp);
+
+  // re-bind input listeners since we cloned the canvas
+  document.getElementById('top-text').oninput = drawMeme;
+  document.getElementById('bottom-text').oninput = drawMeme;
+  document.getElementById('text-color').oninput = drawMeme;
+  document.getElementById('outline-color').oninput = drawMeme;
+  document.getElementById('font-size').oninput = drawMeme;
 }
 
 function drawMeme() {
@@ -676,46 +765,54 @@ function drawMeme() {
 
   if (!selectedImage) return;
 
-  // Size canvas to image aspect ratio, max 700 wide
-  const maxW = 700;
+  const maxW = 560;
   const scale = Math.min(maxW / selectedImage.width, 1);
   canvas.width = selectedImage.width * scale;
   canvas.height = selectedImage.height * scale;
 
   ctx.drawImage(selectedImage, 0, 0, canvas.width, canvas.height);
 
-  // Text style
-  ctx.font = `${fontSize}px Bangers`;
+  ctx.font = `${fontSize}px Impact, Arial Black, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.lineWidth = Math.max(2, fontSize / 12);
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = Math.max(2, fontSize / 10);
   ctx.strokeStyle = outlineColor;
   ctx.fillStyle = textColor;
   ctx.lineJoin = 'round';
 
-  const pad = 20;
+  const texts = [topText, bottomText];
+  texts.forEach((text, i) => {
+    if (!text) return;
+    const x = textPos[i].x * canvas.width;
+    const y = textPos[i].y * canvas.height;
+    ctx.strokeText(text, x, y);
+    ctx.fillText(text, x, y);
 
-  if (topText) {
-    ctx.strokeText(topText, canvas.width / 2, pad + fontSize);
-    ctx.fillText(topText, canvas.width / 2, pad + fontSize);
-  }
-  if (bottomText) {
-    ctx.strokeText(bottomText, canvas.width / 2, canvas.height - pad - 10);
-    ctx.fillText(bottomText, canvas.width / 2, canvas.height - pad - 10);
-  }
+    // Draw subtle drag handle indicator
+    if (dragging === i) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(245,200,66,0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(x - canvas.width * 0.44, y - fontSize * 0.8, canvas.width * 0.88, fontSize * 1.6);
+      ctx.restore();
+    }
+  });
 }
 
 function drawMemePlaceholder(name) {
   const canvas = document.getElementById('meme-canvas');
   const ctx = canvas.getContext('2d');
-  canvas.width = 600;
+  canvas.width = 560;
   canvas.height = 400;
   ctx.fillStyle = '#22222f';
-  ctx.fillRect(0, 0, 600, 400);
+  ctx.fillRect(0, 0, 560, 400);
   ctx.fillStyle = '#7a7890';
-  ctx.font = '20px DM Sans';
+  ctx.font = '18px Segoe UI, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`⚠️ Couldn't load "${name}" template`, 300, 200);
-  ctx.fillText('Try uploading your own image instead', 300, 230);
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`⚠️ Couldn't load "${name}" template`, 280, 190);
+  ctx.fillText('Try uploading your own image instead', 280, 220);
 }
 
 function downloadMeme() {
@@ -733,6 +830,7 @@ function resetMeme() {
   document.getElementById('font-size').value = 40;
   document.getElementById('text-color').value = '#ffffff';
   document.getElementById('outline-color').value = '#000000';
+  resetTextPositions();
   if (selectedImage) drawMeme();
 }
 
