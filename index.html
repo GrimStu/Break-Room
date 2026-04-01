@@ -193,27 +193,7 @@
     font-size: 0.95rem;
   }
 
-  /* ── Joke history ── */
-  .joke-history { margin-top: 20px; }
-  .joke-history-title {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
-  .history-item {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 6px;
-    font-size: 0.85rem;
-    color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+
 
   /* ── Meme section ── */
   .meme-templates {
@@ -438,12 +418,7 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="joke-history-title">Recent Jokes</div>
-      <div id="joke-history">
-        <div class="history-item" style="color: var(--muted); font-style: italic;">No jokes yet...</div>
-      </div>
-    </div>
+
   </div>
 
   <!-- ── MEMES PANEL ── -->
@@ -468,12 +443,12 @@
 
       <div class="meme-text-inputs">
         <div class="text-field">
-          <label>Top Text</label>
-          <input type="text" id="top-text" placeholder="WHEN IT'S MONDAY..." oninput="drawMeme()">
+          <label>Text Line 1 (press Enter for new line)</label>
+          <textarea id="top-text" rows="2" placeholder="WHEN IT'S MONDAY..." oninput="drawMeme()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-family:inherit;font-size:0.95rem;outline:none;resize:vertical;width:100%;transition:border 0.2s;"></textarea>
         </div>
         <div class="text-field">
-          <label>Bottom Text</label>
-          <input type="text" id="bottom-text" placeholder="BUT THE COFFEE HITS" oninput="drawMeme()">
+          <label>Text Line 2 (press Enter for new line)</label>
+          <textarea id="bottom-text" rows="2" placeholder="BUT THE COFFEE HITS" oninput="drawMeme()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-family:inherit;font-size:0.95rem;outline:none;resize:vertical;width:100%;transition:border 0.2s;"></textarea>
         </div>
       </div>
 
@@ -520,7 +495,6 @@ function switchTab(name) {
 // ──────────────────────────────────────────────
 // JOKES
 // ──────────────────────────────────────────────
-let jokeHistory = [];
 let currentJoke = null;
 
 async function fetchJoke() {
@@ -562,7 +536,6 @@ async function fetchJoke() {
       `;
     }
 
-    addToHistory(data);
   } catch (err) {
     display.innerHTML = `<div class="loading-joke" style="color:var(--accent2)">Couldn't load a joke. Check your connection.<br><small>${err.message}</small></div>`;
   }
@@ -574,17 +547,6 @@ function revealPunchline() {
     p.style.display = 'block';
     document.getElementById('reveal-btn').style.display = 'none';
   }
-}
-
-function addToHistory(joke) {
-  const text = joke.type === 'twopart' ? joke.setup : joke.joke;
-  jokeHistory.unshift(text);
-  if (jokeHistory.length > 5) jokeHistory.pop();
-
-  const container = document.getElementById('joke-history');
-  container.innerHTML = jokeHistory.map(j =>
-    `<div class="history-item" title="${escHtml(j)}">${escHtml(j)}</div>`
-  ).join('');
 }
 
 function escHtml(str) {
@@ -607,16 +569,18 @@ const TEMPLATES = [
 
 let selectedImage = null;
 let selectedTemplateIndex = null;
+let dragging = null;
+let dragOffset = { x: 0, y: 0 };
+let canvasW = 1, canvasH = 1; // track logical size separately
 
-// Text label positions (as fractions 0-1 of canvas size)
 let textPos = [
-  { x: 0.5, y: 0.08 },  // line 1
-  { x: 0.5, y: 0.92 },  // line 2
+  { x: 0.5, y: 0.08 },
+  { x: 0.5, y: 0.92 },
 ];
 
-// Drag state
-let dragging = null;  // index of text being dragged, or null
-let dragOffset = { x: 0, y: 0 };
+function resetTextPositions() {
+  textPos = [{ x: 0.5, y: 0.08 }, { x: 0.5, y: 0.92 }];
+}
 
 function buildTemplateGrid() {
   const grid = document.getElementById('template-grid');
@@ -633,20 +597,10 @@ function selectTemplate(index) {
   document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
   document.getElementById('tpl-' + index).classList.add('selected');
   selectedTemplateIndex = index;
-
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    selectedImage = img;
-    resetTextPositions();
-    showEditor();
-    drawMeme();
-  };
-  img.onerror = () => {
-    selectedImage = null;
-    showEditor();
-    drawMemePlaceholder(TEMPLATES[index].name);
-  };
+  img.onload = () => { selectedImage = img; resetTextPositions(); showEditor(); drawMeme(); };
+  img.onerror = () => { selectedImage = null; showEditor(); drawMemePlaceholder(TEMPLATES[index].name); };
   img.src = TEMPLATES[index].url;
 }
 
@@ -669,132 +623,143 @@ function handleUpload(event) {
   reader.readAsDataURL(file);
 }
 
-function resetTextPositions() {
-  textPos = [
-    { x: 0.5, y: 0.08 },
-    { x: 0.5, y: 0.92 },
-  ];
-}
-
 function showEditor() {
-  document.getElementById('meme-editor').style.display = 'block';
-  document.getElementById('meme-editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  initCanvasDrag();
+  const editor = document.getElementById('meme-editor');
+  editor.style.display = 'block';
+  editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function getCanvasPos(e, canvas) {
+// Get position within canvas accounting for CSS scaling
+function getCanvasPos(e) {
+  const canvas = document.getElementById('meme-canvas');
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  // Scale from display pixels to canvas pixels
   return {
-    x: (clientX - rect.left) * scaleX,
-    y: (clientY - rect.top) * scaleY,
+    x: (clientX - rect.left) * (canvasW / rect.width),
+    y: (clientY - rect.top)  * (canvasH / rect.height),
   };
 }
 
-function hitTestText(pos, canvas) {
+function hitTestText(pos) {
   const fontSize = parseInt(document.getElementById('font-size').value);
-  const hitRadius = fontSize * 1.2;
-  for (let i = 0; i < textPos.length; i++) {
-    const tx = textPos[i].x * canvas.width;
-    const ty = textPos[i].y * canvas.height;
-    if (Math.abs(pos.x - tx) < canvas.width * 0.45 && Math.abs(pos.y - ty) < hitRadius) {
+  const hitH = fontSize * 1.8;
+  const hitW = canvasW * 0.9;
+  for (let i = textPos.length - 1; i >= 0; i--) {
+    const tx = textPos[i].x * canvasW;
+    const ty = textPos[i].y * canvasH;
+    if (Math.abs(pos.x - tx) < hitW / 2 && Math.abs(pos.y - ty) < hitH / 2) {
       return i;
     }
   }
   return null;
 }
 
+// Attach drag listeners once to canvas on page load
 function initCanvasDrag() {
   const canvas = document.getElementById('meme-canvas');
-  // Remove old listeners by cloning
-  const fresh = canvas.cloneNode(true);
-  canvas.parentNode.replaceChild(fresh, canvas);
-  const c = document.getElementById('meme-canvas');
 
-  function onDown(e) {
-    const pos = getCanvasPos(e, c);
-    const hit = hitTestText(pos, c);
+  canvas.addEventListener('mousedown', (e) => {
+    if (!selectedImage) return;
+    const pos = getCanvasPos(e);
+    const hit = hitTestText(pos);
     if (hit !== null) {
       dragging = hit;
-      dragOffset.x = pos.x - textPos[hit].x * c.width;
-      dragOffset.y = pos.y - textPos[hit].y * c.height;
-      c.style.cursor = 'grabbing';
+      dragOffset.x = pos.x - textPos[hit].x * canvasW;
+      dragOffset.y = pos.y - textPos[hit].y * canvasH;
+      canvas.style.cursor = 'grabbing';
       e.preventDefault();
     }
-  }
-  function onMove(e) {
-    if (dragging === null) return;
-    const pos = getCanvasPos(e, c);
-    textPos[dragging].x = Math.min(1, Math.max(0, (pos.x - dragOffset.x) / c.width));
-    textPos[dragging].y = Math.min(1, Math.max(0, (pos.y - dragOffset.y) / c.height));
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (dragging === null || !selectedImage) return;
+    const pos = getCanvasPos(e);
+    textPos[dragging].x = Math.min(0.98, Math.max(0.02, (pos.x - dragOffset.x) / canvasW));
+    textPos[dragging].y = Math.min(0.98, Math.max(0.02, (pos.y - dragOffset.y) / canvasH));
     drawMeme();
     e.preventDefault();
-  }
-  function onUp() {
-    dragging = null;
-    c.style.cursor = 'grab';
-  }
+  });
 
-  c.addEventListener('mousedown', onDown);
-  c.addEventListener('mousemove', onMove);
-  c.addEventListener('mouseup', onUp);
-  c.addEventListener('mouseleave', onUp);
-  c.addEventListener('touchstart', onDown, { passive: false });
-  c.addEventListener('touchmove', onMove, { passive: false });
-  c.addEventListener('touchend', onUp);
+  canvas.addEventListener('mouseup',    () => { dragging = null; canvas.style.cursor = 'grab'; });
+  canvas.addEventListener('mouseleave', () => { dragging = null; canvas.style.cursor = 'grab'; });
 
-  // re-bind input listeners since we cloned the canvas
-  document.getElementById('top-text').oninput = drawMeme;
-  document.getElementById('bottom-text').oninput = drawMeme;
-  document.getElementById('text-color').oninput = drawMeme;
-  document.getElementById('outline-color').oninput = drawMeme;
-  document.getElementById('font-size').oninput = drawMeme;
+  canvas.addEventListener('touchstart', (e) => {
+    if (!selectedImage) return;
+    const pos = getCanvasPos(e);
+    const hit = hitTestText(pos);
+    if (hit !== null) { dragging = hit; dragOffset.x = pos.x - textPos[hit].x * canvasW; dragOffset.y = pos.y - textPos[hit].y * canvasH; e.preventDefault(); }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (dragging === null) return;
+    const pos = getCanvasPos(e);
+    textPos[dragging].x = Math.min(0.98, Math.max(0.02, (pos.x - dragOffset.x) / canvasW));
+    textPos[dragging].y = Math.min(0.98, Math.max(0.02, (pos.y - dragOffset.y) / canvasH));
+    drawMeme();
+    e.preventDefault();
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => { dragging = null; });
+}
+
+function drawMultilineText(ctx, text, x, y, fontSize, lineHeight) {
+  const lines = text.split('\n');
+  const totalH = (lines.length - 1) * lineHeight;
+  lines.forEach((line, i) => {
+    const ly = y - totalH / 2 + i * lineHeight;
+    ctx.strokeText(line, x, ly);
+    ctx.fillText(line, x, ly);
+  });
 }
 
 function drawMeme() {
   const canvas = document.getElementById('meme-canvas');
   const ctx = canvas.getContext('2d');
-  const topText = document.getElementById('top-text').value.toUpperCase();
-  const bottomText = document.getElementById('bottom-text').value.toUpperCase();
-  const textColor = document.getElementById('text-color').value;
+  const topText    = (document.getElementById('top-text').value || '').toUpperCase();
+  const bottomText = (document.getElementById('bottom-text').value || '').toUpperCase();
+  const textColor   = document.getElementById('text-color').value;
   const outlineColor = document.getElementById('outline-color').value;
-  const fontSize = parseInt(document.getElementById('font-size').value);
+  const fontSize    = parseInt(document.getElementById('font-size').value);
 
   if (!selectedImage) return;
 
-  const maxW = 560;
+  const maxW = 540;
   const scale = Math.min(maxW / selectedImage.width, 1);
-  canvas.width = selectedImage.width * scale;
-  canvas.height = selectedImage.height * scale;
+  canvasW = Math.round(selectedImage.width * scale);
+  canvasH = Math.round(selectedImage.height * scale);
+  canvas.width  = canvasW;
+  canvas.height = canvasH;
 
-  ctx.drawImage(selectedImage, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(selectedImage, 0, 0, canvasW, canvasH);
 
-  ctx.font = `${fontSize}px Impact, Arial Black, sans-serif`;
-  ctx.textAlign = 'center';
+  ctx.font         = `${fontSize}px Impact, Arial Black, sans-serif`;
+  ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.lineWidth = Math.max(2, fontSize / 10);
-  ctx.strokeStyle = outlineColor;
-  ctx.fillStyle = textColor;
-  ctx.lineJoin = 'round';
+  ctx.lineWidth    = Math.max(2, fontSize / 9);
+  ctx.strokeStyle  = outlineColor;
+  ctx.fillStyle    = textColor;
+  ctx.lineJoin     = 'round';
 
+  const lineHeight = fontSize * 1.15;
   const texts = [topText, bottomText];
-  texts.forEach((text, i) => {
-    if (!text) return;
-    const x = textPos[i].x * canvas.width;
-    const y = textPos[i].y * canvas.height;
-    ctx.strokeText(text, x, y);
-    ctx.fillText(text, x, y);
 
-    // Draw subtle drag handle indicator
+  texts.forEach((text, i) => {
+    if (!text.trim()) return;
+    const x = textPos[i].x * canvasW;
+    const y = textPos[i].y * canvasH;
+    drawMultilineText(ctx, text, x, y, fontSize, lineHeight);
+
+    // Drag highlight
     if (dragging === i) {
+      const lines = text.split('\n');
+      const blockH = lines.length * lineHeight;
       ctx.save();
-      ctx.strokeStyle = 'rgba(245,200,66,0.6)';
+      ctx.strokeStyle = 'rgba(245,200,66,0.7)';
       ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 3]);
-      ctx.strokeRect(x - canvas.width * 0.44, y - fontSize * 0.8, canvas.width * 0.88, fontSize * 1.6);
+      ctx.setLineDash([5, 3]);
+      ctx.strokeRect(x - canvasW * 0.44, y - blockH / 2 - 4, canvasW * 0.88, blockH + 8);
       ctx.restore();
     }
   });
@@ -803,16 +768,16 @@ function drawMeme() {
 function drawMemePlaceholder(name) {
   const canvas = document.getElementById('meme-canvas');
   const ctx = canvas.getContext('2d');
-  canvas.width = 560;
-  canvas.height = 400;
+  canvasW = canvas.width  = 540;
+  canvasH = canvas.height = 400;
   ctx.fillStyle = '#22222f';
-  ctx.fillRect(0, 0, 560, 400);
+  ctx.fillRect(0, 0, 540, 400);
   ctx.fillStyle = '#7a7890';
-  ctx.font = '18px Segoe UI, sans-serif';
+  ctx.font = '17px Segoe UI, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`⚠️ Couldn't load "${name}" template`, 280, 190);
-  ctx.fillText('Try uploading your own image instead', 280, 220);
+  ctx.fillText(`⚠️ Couldn't load "${name}" template`, 270, 190);
+  ctx.fillText('Try uploading your own image instead', 270, 218);
 }
 
 function downloadMeme() {
@@ -825,10 +790,10 @@ function downloadMeme() {
 }
 
 function resetMeme() {
-  document.getElementById('top-text').value = '';
+  document.getElementById('top-text').value    = '';
   document.getElementById('bottom-text').value = '';
-  document.getElementById('font-size').value = 40;
-  document.getElementById('text-color').value = '#ffffff';
+  document.getElementById('font-size').value   = 40;
+  document.getElementById('text-color').value  = '#ffffff';
   document.getElementById('outline-color').value = '#000000';
   resetTextPositions();
   if (selectedImage) drawMeme();
@@ -848,6 +813,7 @@ function showToast(msg) {
 // INIT
 // ──────────────────────────────────────────────
 buildTemplateGrid();
+initCanvasDrag();
 </script>
 </body>
 </html>
