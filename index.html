@@ -461,9 +461,17 @@
           <label>Outline</label>
           <input type="color" id="outline-color" value="#000000" oninput="drawMeme()">
         </div>
+      </div>
+      <div class="meme-options" style="margin-top:4px;">
         <div class="meme-option">
-          <label>Font Size</label>
-          <input type="range" id="font-size" min="20" max="80" value="40" oninput="drawMeme()">
+          <label>Line 1 Size</label>
+          <input type="range" id="font-size-1" min="12" max="80" value="40" oninput="updateSizeLabel(0);drawMeme()">
+          <span id="font-size-1-val" style="font-size:0.75rem;color:var(--muted);">40</span>
+        </div>
+        <div class="meme-option">
+          <label>Line 2 Size</label>
+          <input type="range" id="font-size-2" min="12" max="80" value="40" oninput="updateSizeLabel(1);drawMeme()">
+          <span id="font-size-2-val" style="font-size:0.75rem;color:var(--muted);">40</span>
         </div>
       </div>
       <div class="meme-options" style="margin-top:4px;">
@@ -758,7 +766,10 @@ function drawMeme() {
   const bottomText = (document.getElementById('bottom-text').value || '').toUpperCase();
   const textColor   = document.getElementById('text-color').value;
   const outlineColor = document.getElementById('outline-color').value;
-  const fontSize    = parseInt(document.getElementById('font-size').value);
+  const fontSizes = [
+    parseInt(document.getElementById('font-size-1').value),
+    parseInt(document.getElementById('font-size-2').value),
+  ];
 
   if (!selectedImage) return;
 
@@ -771,10 +782,8 @@ function drawMeme() {
 
   ctx.drawImage(selectedImage, 0, 0, canvasW, canvasH);
 
-  ctx.font         = `${fontSize}px Impact, Arial Black, sans-serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.lineWidth    = Math.max(2, fontSize / 9);
   ctx.strokeStyle  = outlineColor;
   ctx.fillStyle    = textColor;
   ctx.lineJoin     = 'round';
@@ -784,11 +793,15 @@ function drawMeme() {
     parseInt(document.getElementById('rotate-2').value) * Math.PI / 180,
   ];
 
-  const lineHeight = fontSize * 1.15;
   const texts = [topText, bottomText];
 
   texts.forEach((text, i) => {
     if (!text.trim()) return;
+    const fontSize = fontSizes[i];
+    const lineHeight = fontSize * 1.15;
+    ctx.font      = `${fontSize}px Impact, Arial Black, sans-serif`;
+    ctx.lineWidth = Math.max(2, fontSize / 9);
+
     const x = textPos[i].x * canvasW;
     const y = textPos[i].y * canvasH;
 
@@ -814,7 +827,6 @@ function drawMeme() {
     ctx.restore();
   });
 }
-
 function drawMemePlaceholder(name) {
   const canvas = document.getElementById('meme-canvas');
   const ctx = canvas.getContext('2d');
@@ -839,6 +851,12 @@ function downloadMeme() {
   showToast('Meme downloaded! 🎉');
 }
 
+function updateSizeLabel(index) {
+  const id = index === 0 ? 'font-size-1' : 'font-size-2';
+  const val = document.getElementById(id).value;
+  document.getElementById(id + '-val').textContent = val;
+}
+
 function updateRotateLabel(index) {
   const id = index === 0 ? 'rotate-1' : 'rotate-2';
   const val = document.getElementById(id).value;
@@ -848,7 +866,10 @@ function updateRotateLabel(index) {
 function resetMeme() {
   document.getElementById('top-text').value    = '';
   document.getElementById('bottom-text').value = '';
-  document.getElementById('font-size').value   = 40;
+  document.getElementById('font-size-1').value = 40;
+  document.getElementById('font-size-2').value = 40;
+  document.getElementById('font-size-1-val').textContent = '40';
+  document.getElementById('font-size-2-val').textContent = '40';
   document.getElementById('text-color').value  = '#ffffff';
   document.getElementById('outline-color').value = '#000000';
   document.getElementById('rotate-1').value = 0;
