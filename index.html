@@ -677,7 +677,7 @@
 
       <!-- Prompt input -->
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-        <textarea id="ai-prompt" rows="3" placeholder="e.g. A cat wearing a business suit presenting to a boardroom full of dogs..." style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-family:inherit;font-size:0.95rem;outline:none;resize:vertical;width:100%;transition:border 0.2s;"></textarea>
+        <textarea id="ai-prompt" rows="3" placeholder="e.g. A cat wearing a business suit presenting to a boardroom full of dogs..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();generateImage();}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-family:inherit;font-size:0.95rem;outline:none;resize:vertical;width:100%;transition:border 0.2s;"></textarea>
         <div style="display:flex;justify-content:center;">
           <button class="btn btn-primary" id="ai-generate-btn" onclick="generateImage()">✨ Generate Image</button>
         </div>
@@ -1312,7 +1312,8 @@ async function generateImage() {
 
   const fullPrompt = currentStyleSuffix ? `${prompt}, ${currentStyleSuffix}` : prompt;
   const encodedPrompt = encodeURIComponent(fullPrompt);
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=768&height=768&nologo=true&seed=${Date.now()}`;
+  const seed = Math.floor(Math.random() * 999999);
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&seed=${seed}&model=turbo`;
 
   const result = document.getElementById('ai-result');
   const loading = document.getElementById('ai-loading');
