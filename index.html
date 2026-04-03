@@ -434,27 +434,93 @@
   #toast.show { opacity: 1; transform: translateY(0); }
   #toast.error { background: var(--accent2); color: #fff; }
 
-  /* ── AI Image Generator ── */
-  .style-presets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
+  /* ── Soundboard ── */
+  .sound-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
   }
-  .style-btn {
+  .sound-btn {
+    position: relative;
     background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-family: inherit;
-    font-size: 0.82rem;
-    font-weight: 600;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 6px;
     cursor: pointer;
+    text-align: center;
     transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-height: 90px;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
   }
-  .style-btn:hover { border-color: var(--accent); color: var(--text); }
-  .style-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
+  .sound-btn:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .sound-btn:active { transform: scale(0.95); }
+  .sound-btn.playing { border-color: var(--accent); background: rgba(245,200,66,0.12); }
+  .sound-btn.recording { border-color: var(--accent2); background: rgba(232,86,58,0.15); animation: pulse-rec 0.8s infinite; }
+  .sound-btn.custom { border-color: var(--accent3); }
+  .sound-btn.custom:hover { border-color: var(--accent); }
+  .sound-btn.empty { opacity: 0.3; cursor: default; }
+  .sound-btn.empty:hover { transform: none; border-color: var(--border); }
+  .sound-emoji { font-size: 1.6rem; line-height: 1; }
+  .sound-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+  .sound-btn.custom .sound-label { color: var(--accent3); }
+  .sound-rec-hint {
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  @keyframes pulse-rec {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(232,86,58,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(232,86,58,0); }
+  }
+
+  .sound-btn .sound-del {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(232,86,58,0.9);
+    border: none;
+    color: #fff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    z-index: 10;
+  }
+  .sound-btn.shift-held .sound-del { display: flex; }
+  .sound-label-input {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    right: 4px;
+    background: var(--surface);
+    border: 1px solid var(--accent3);
+    color: var(--text);
+    border-radius: 4px;
+    font-size: 0.65rem;
+    padding: 2px 4px;
+    text-align: center;
+    outline: none;
+    font-family: inherit;
+  }
 
   /* ── Upload modal overlay ── */
   .modal-overlay {
@@ -493,7 +559,6 @@
   .modal-input:focus { border-color: var(--accent); }
   .modal-btn-row { display: flex; gap: 10px; justify-content: center; }
 </style>
-<script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
 
@@ -505,7 +570,7 @@
   <button class="tab-btn active" onclick="switchTab('jokes', this)">🎭 Joke Generator</button>
   <button class="tab-btn" onclick="switchTab('memes', this)">🖼️ Meme Creator</button>
   <button class="tab-btn" onclick="switchTab('hall', this)">🏆 Hall of Memes</button>
-  <button class="tab-btn" onclick="switchTab('ai', this)">🎨 AI Images</button>
+  <button class="tab-btn" onclick="switchTab('sounds', this)">🔊 Soundboard</button>
 </div>
 
 <main>
@@ -657,50 +722,12 @@
     </div>
   </div>
 
-  <!-- ── AI IMAGE GENERATOR ── -->
-  <div id="panel-ai" class="panel">
+  <!-- ── SOUNDBOARD ── -->
+  <div id="panel-sounds" class="panel">
     <div class="card">
-      <div class="card-title" style="text-align:center;">🎨 AI Image Generator</div>
-      <p style="text-align:center;color:var(--muted);font-size:0.88rem;margin-bottom:16px;">Describe what you want to see — then meme it!</p>
-
-      <!-- Style presets -->
-      <div style="margin-bottom:14px;">
-        <div style="font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;text-align:center;">Quick Style</div>
-        <div class="style-presets">
-          <button class="style-btn active" onclick="setStyle(this, '')">🎲 None</button>
-          <button class="style-btn" onclick="setStyle(this, 'photorealistic, detailed photography')">📷 Realistic</button>
-          <button class="style-btn" onclick="setStyle(this, 'cartoon style, colorful illustration')">🎨 Cartoon</button>
-          <button class="style-btn" onclick="setStyle(this, 'cinematic, dramatic lighting, film still')">🌌 Cinematic</button>
-          <button class="style-btn" onclick="setStyle(this, 'pixel art, retro 8-bit game style')">👾 Pixel Art</button>
-          <button class="style-btn" onclick="setStyle(this, 'anime style, vibrant, Japanese animation')">🎭 Anime</button>
-        </div>
-      </div>
-
-      <!-- Prompt input -->
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-        <textarea id="ai-prompt" rows="3" placeholder="e.g. A cat wearing a business suit presenting to a boardroom full of dogs..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();generateImage();}" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-family:inherit;font-size:0.95rem;outline:none;resize:vertical;width:100%;transition:border 0.2s;"></textarea>
-        <div style="display:flex;justify-content:center;">
-          <button class="btn btn-primary" id="ai-generate-btn" onclick="generateImage()">✨ Generate Image</button>
-        </div>
-      </div>
-      <p style="font-size:0.72rem;color:var(--muted);text-align:center;margin-bottom:12px;">⚡ Powered by Puter.js · Free · No sign-in required</p>
-
-      <!-- Result area -->
-      <div id="ai-result" style="display:none;">
-        <div id="ai-loading" style="display:none;text-align:center;padding:40px 0;">
-          <div class="spinner" style="width:36px;height:36px;margin:0 auto 12px;"></div>
-          <p style="color:var(--muted);font-size:0.88rem;">Generating your image...<br><small>This can take 10–20 seconds</small></p>
-        </div>
-        <div id="ai-image-wrap" style="display:none;text-align:center;">
-          <img id="ai-image" src="" alt="Generated image" style="max-width:100%;border-radius:10px;border:1px solid var(--border);margin-bottom:14px;">
-          <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-hall" onclick="sendToMemeCreator()">🖼️ Send to Meme Creator</button>
-            <button class="btn btn-primary" onclick="downloadAiImage()">⬇️ Download</button>
-            <button class="btn btn-secondary" onclick="generateImage()">🔄 Regenerate</button>
-          </div>
-        </div>
-        <div id="ai-error" style="display:none;text-align:center;padding:20px;color:var(--accent2);font-size:0.88rem;"></div>
-      </div>
+      <div class="card-title" style="text-align:center;">🔊 Soundboard</div>
+      <p style="text-align:center;color:var(--muted);font-size:0.82rem;margin-bottom:20px;">Tap to play · Hold to record on custom slots · Custom sounds shared with the team</p>
+      <div class="sound-grid" id="sound-grid"></div>
     </div>
   </div>
 
@@ -730,6 +757,8 @@ const CLOUDINARY_PRESET = 'Public Break Room';
 const JSONBIN_ID  = '69cd4c8caaba882197b61314';
 const JSONBIN_KEY = '$2a$10$.K6tyoVPu7VEEVTiLauLIezGoBkxg3yvLxHlE/2IA3KHxz85aNoom';
 const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+const SOUNDS_BIN_ID  = '69cfa20836566621a87686d3';
+const SOUNDS_BIN_URL = `https://api.jsonbin.io/v3/b/${SOUNDS_BIN_ID}`;
 
 // ─────────────────────────────────────────────
 // TABS
@@ -740,6 +769,7 @@ function switchTab(name, btn) {
   document.getElementById('panel-' + name).classList.add('active');
   btn.classList.add('active');
   if (name === 'hall') loadHall();
+  if (name === 'sounds') loadCustomSounds();
 }
 
 // ─────────────────────────────────────────────
@@ -1296,84 +1326,261 @@ async function deleteMeme(e, index) {
   }
 }
 
+
 // ─────────────────────────────────────────────
-// AI IMAGE GENERATOR
+// SOUNDBOARD
 // ─────────────────────────────────────────────
-let currentStyleSuffix = '';
-let currentAiImageUrl = '';
+const FREESOUND_KEY = 'QCrFa6vFre2pVoYtJ1hsyutB53F6IMiwTOs4MeLq';
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-function setStyle(btn, style) {
-  document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  currentStyleSuffix = style;
-}
+// 10 preset sounds with Freesound search terms
+const PRESET_SOUNDS = [
+  { id: 'airhorn',   emoji: '📣', label: 'AIR HORN',    query: 'air horn stadium' },
+  { id: 'foghorn',   emoji: '🚢', label: 'FOGHORN',     query: 'foghorn ship' },
+  { id: 'klaxon',    emoji: '🚨', label: 'KLAXON',      query: 'klaxon alarm' },
+  { id: 'sadtrom',   emoji: '🎺', label: 'SAD TROMBONE',query: 'sad trombone wah wah' },
+  { id: 'applause',  emoji: '👏', label: 'APPLAUSE',    query: 'crowd applause cheering' },
+  { id: 'drumroll',  emoji: '🥁', label: 'DRUM ROLL',   query: 'snare drum roll' },
+  { id: 'dogbark',   emoji: '🐶', label: 'DOG BARK',    query: 'dog barking' },
+  { id: 'laser',     emoji: '⚡', label: 'LASER',       query: 'laser sci-fi zap' },
+  { id: 'fail',      emoji: '❌', label: 'FAIL',        query: 'game fail wrong buzzer' },
+  { id: 'tada',      emoji: '🎉', label: 'TA-DA!',      query: 'fanfare victory ta da' },
+];
 
-async function generateImage() {
-  const prompt = document.getElementById('ai-prompt').value.trim();
-  if (!prompt) { showToast('Enter a prompt first!', true); return; }
+// Cache loaded sound URLs so we don't re-fetch
+const soundCache = {};
+let currentAudio = null;
 
-  const fullPrompt = currentStyleSuffix ? `${prompt}, ${currentStyleSuffix}` : prompt;
+// Synth fallbacks for when Freesound fails
+const synthFallbacks = {
+  airhorn:  () => { const a=audioCtx,o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sawtooth';const t=a.currentTime;[880,1100,1320].forEach((f,i)=>{o.frequency.setValueAtTime(f,t+i*0.01)});g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.8);o.start(t);o.stop(t+0.8); },
+  foghorn:  () => { const a=audioCtx,o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';const t=a.currentTime;o.frequency.setValueAtTime(110,t);o.frequency.linearRampToValueAtTime(80,t+1.5);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.5,t+0.1);g.gain.setValueAtTime(0.5,t+1.2);g.gain.linearRampToValueAtTime(0,t+1.5);o.start(t);o.stop(t+1.5); },
+  klaxon:   () => { const a=audioCtx,o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sawtooth';const t=a.currentTime;[880,440,880,440].forEach((f,i)=>o.frequency.setValueAtTime(f,t+i*0.25));g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+1);o.start(t);o.stop(t+1); },
+  sadtrom:  () => { const a=audioCtx,o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sawtooth';const t=a.currentTime;[466,415,370,311].forEach((f,i)=>o.frequency.setValueAtTime(f,t+i*0.18));g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.9);o.start(t);o.stop(t+0.9); },
+  applause: () => { const a=audioCtx;for(let i=0;i<60;i++){const o=a.createOscillator(),g=a.createGain(),f=a.createBiquadFilter();o.connect(f);f.connect(g);g.connect(a.destination);o.type='sawtooth';f.type='bandpass';f.frequency.value=800+Math.random()*2000;const t=a.currentTime+Math.random()*2;o.frequency.value=100+Math.random()*3000;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.015,t+0.01);g.gain.exponentialRampToValueAtTime(0.001,t+0.07);o.start(t);o.stop(t+0.07);} },
+  drumroll: () => { const a=audioCtx;for(let i=0;i<24;i++){const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='triangle';const t=a.currentTime+i*0.05;o.frequency.value=120+Math.random()*40;g.gain.setValueAtTime(0.15+i*0.008,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.04);o.start(t);o.stop(t+0.04);} },
+  dogbark:  () => { const a=audioCtx;[0,0.4,0.8].forEach(d=>{const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sawtooth';const t=a.currentTime+d;o.frequency.setValueAtTime(300,t);o.frequency.exponentialRampToValueAtTime(150,t+0.15);g.gain.setValueAtTime(0.35,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.18);o.start(t);o.stop(t+0.18);}); },
+  laser:    () => { const a=audioCtx,o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';const t=a.currentTime;o.frequency.setValueAtTime(1800,t);o.frequency.exponentialRampToValueAtTime(200,t+0.3);g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);o.start(t);o.stop(t+0.3); },
+  fail:     () => { const a=audioCtx,o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';const t=a.currentTime;[400,350,300,200].forEach((f,i)=>o.frequency.setValueAtTime(f,t+i*0.1));g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.start(t);o.stop(t+0.5); },
+  tada:     () => { const a=audioCtx;[[523,0],[659,0.1],[784,0.2],[1047,0.3]].forEach(([f,d])=>{const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='triangle';const t=a.currentTime+d;o.frequency.value=f;g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.25);o.start(t);o.stop(t+0.25);}); },
+};
 
-  const result = document.getElementById('ai-result');
-  const loading = document.getElementById('ai-loading');
-  const imageWrap = document.getElementById('ai-image-wrap');
-  const errorDiv = document.getElementById('ai-error');
-  const btn = document.getElementById('ai-generate-btn');
-  const imgEl = document.getElementById('ai-image');
+async function fetchAndPlayPreset(sound, btn) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
 
-  result.style.display = 'block';
-  loading.style.display = 'block';
-  imageWrap.style.display = 'none';
-  errorDiv.style.display = 'none';
-  btn.disabled = true;
-  btn.textContent = '⏳ Generating...';
-  document.getElementById('ai-prompt').value = '';
+  // If cached, play directly
+  if (soundCache[sound.id]) {
+    playAudioUrl(soundCache[sound.id], btn);
+    return;
+  }
+
+  // Show loading
+  const hintEl = btn.querySelector('.sound-rec-hint');
+  if (hintEl) hintEl.textContent = '⏳ loading...';
+  btn.classList.add('playing');
 
   try {
-    const imageElement = await puter.ai.txt2img(fullPrompt);
-    const imageUrl = imageElement.src;
-    currentAiImageUrl = imageUrl;
-    imgEl.src = imageUrl;
-    loading.style.display = 'none';
-    imageWrap.style.display = 'block';
+    const res = await fetch(
+      `https://freesound.org/apiv2/search/text/?query=${encodeURIComponent(sound.query)}&fields=id,previews&page_size=5&filter=duration:[0.5+TO+8]&token=${FREESOUND_KEY}`
+    );
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    if (!data.results || data.results.length === 0) throw new Error('No results');
+
+    const pick = data.results[Math.floor(Math.random() * data.results.length)];
+    const url = pick.previews['preview-hq-mp3'] || pick.previews['preview-lq-mp3'];
+    soundCache[sound.id] = url;
+    if (hintEl) hintEl.textContent = 'Hold to shuffle';
+    playAudioUrl(url, btn);
   } catch (err) {
-    loading.style.display = 'none';
-    errorDiv.style.display = 'block';
-    errorDiv.textContent = `⚠️ ${err.message || 'Generation failed — try again'}`;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '✨ Generate Image';
+    // Fall back to synth
+    btn.classList.remove('playing');
+    if (hintEl) hintEl.textContent = 'Hold to shuffle';
+    if (synthFallbacks[sound.id]) {
+      btn.classList.add('playing');
+      setTimeout(() => btn.classList.remove('playing'), 800);
+      synthFallbacks[sound.id]();
+    } else {
+      showToast('Could not load sound', true);
+    }
   }
 }
 
-function sendToMemeCreator() {
-  if (!currentAiImageUrl) return;
-  const img = new Image();
-  img.onload = () => {
-    selectedImage = img;
-    document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
-    resetTextPositions();
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('panel-memes').classList.add('active');
-    document.querySelectorAll('.tab-btn')[1].classList.add('active');
-    showEditor();
-    drawMeme();
-    showToast('Image sent to Meme Creator! 🎨');
+function playAudioUrl(url, btn) {
+  // Stop any currently playing sound
+  if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+  const audio = new Audio(url);
+  currentAudio = audio;
+  btn.classList.add('playing');
+  audio.play();
+  audio.onended = () => btn.classList.remove('playing');
+  audio.onerror = () => {
+    btn.classList.remove('playing');
+    showToast('Playback failed — try again', true);
   };
-  img.onerror = () => showToast('Could not send to Meme Creator — try downloading and uploading instead.', true);
-  img.crossOrigin = 'anonymous';
-  img.src = currentAiImageUrl + '&t=' + Date.now();
 }
 
-function downloadAiImage() {
-  if (!currentAiImageUrl) return;
-  const link = document.createElement('a');
-  link.href = currentAiImageUrl;
-  link.download = 'ai-image.png';
-  link.target = '_blank';
-  link.click();
-  showToast('Image downloaded! 🎉');
+// Custom sound state
+let customSounds = [null, null, null, null, null]; // 5 slots
+let mediaRecorder = null;
+let recordingSlot = null;
+let recordingChunks = [];
+let recordingTimer = null;
+
+async function loadCustomSounds() {
+  try {
+    const res = await fetch(SOUNDS_BIN_URL + '/latest', {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    const data = await res.json();
+    customSounds = data.record?.sounds || [null,null,null,null,null];
+    // Pad to 5
+    while (customSounds.length < 5) customSounds.push(null);
+    buildSoundboard();
+  } catch (err) {
+    buildSoundboard();
+  }
+}
+
+async function saveCustomSounds() {
+  try {
+    await fetch(SOUNDS_BIN_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
+      body: JSON.stringify({ sounds: customSounds }),
+    });
+  } catch (err) {
+    showToast('Failed to save sound', true);
+  }
+}
+
+function buildSoundboard() {
+  const grid = document.getElementById('sound-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  // 10 presets
+  PRESET_SOUNDS.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'sound-btn';
+    btn.dataset.id = s.id;
+    btn.innerHTML = `<span class="sound-emoji">${s.emoji}</span><span class="sound-label">${s.label}</span><span class="sound-rec-hint">Hold to shuffle</span>`;
+
+    let holdTimer = null;
+    let didHold = false;
+
+    const onDown = () => {
+      didHold = false;
+      holdTimer = setTimeout(() => {
+        didHold = true;
+        delete soundCache[s.id];
+        btn.classList.add('playing');
+        const orig = btn.querySelector('.sound-rec-hint').textContent;
+        btn.querySelector('.sound-rec-hint').textContent = '🔀 shuffling...';
+        fetchAndPlayPreset(s, btn).then(() => {
+          if (btn.querySelector('.sound-rec-hint'))
+            btn.querySelector('.sound-rec-hint').textContent = 'Hold to shuffle';
+        });
+      }, 600);
+    };
+    const onUp = () => {
+      clearTimeout(holdTimer);
+      if (!didHold) fetchAndPlayPreset(s, btn);
+    };
+
+    btn.addEventListener('mousedown', onDown);
+    btn.addEventListener('mouseup', onUp);
+    btn.addEventListener('mouseleave', () => clearTimeout(holdTimer));
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(); }, { passive: false });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); onUp(); });
+    grid.appendChild(btn);
+  });
+
+  // 5 custom slots
+  for (let i = 0; i < 5; i++) {
+    const sound = customSounds[i];
+    const btn = document.createElement('button');
+    btn.className = 'sound-btn custom';
+    btn.dataset.customSlot = i;
+
+    if (sound) {
+      btn.innerHTML = `<span class="sound-emoji">🎙️</span><span class="sound-label">${escHtml(sound.label)}</span><span class="sound-rec-hint">Hold to re-record</span><button class="sound-del" onclick="deleteCustomSound(event,${i})">✕</button>`;
+      btn.addEventListener('click', () => playCustomSound(i, btn));
+    } else {
+      btn.innerHTML = `<span class="sound-emoji">🎙️</span><span class="sound-label" style="color:var(--muted);">CUSTOM ${i+1}</span><span class="sound-rec-hint">Hold to record</span>`;
+    }
+
+    btn.addEventListener('mousedown', (e) => startRecording(i, btn));
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(i, btn); }, { passive: false });
+    btn.addEventListener('mouseup', () => stopRecording(i, btn));
+    btn.addEventListener('mouseleave', () => stopRecording(i, btn));
+    btn.addEventListener('touchend', () => stopRecording(i, btn));
+    grid.appendChild(btn);
+  }
+
+  // 10 blank slots
+  for (let i = 0; i < 10; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'sound-btn empty';
+    btn.innerHTML = `<span class="sound-emoji">➕</span><span class="sound-label" style="color:var(--muted);">COMING SOON</span>`;
+    btn.disabled = true;
+    grid.appendChild(btn);
+  }
+}
+
+function playCustomSound(slotIndex, btn) {
+  const sound = customSounds[slotIndex];
+  if (!sound?.data) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  btn.classList.add('playing');
+  setTimeout(() => btn.classList.remove('playing'), 800);
+  const audio = new Audio(sound.data);
+  audio.play();
+}
+
+async function startRecording(slotIndex, btn) {
+  // Only start recording after holding 500ms
+  recordingTimer = setTimeout(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingChunks = [];
+      recordingSlot = slotIndex;
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => recordingChunks.push(e.data);
+      mediaRecorder.start();
+      btn.classList.add('recording');
+      btn.querySelector('.sound-label').textContent = '● REC...';
+    } catch (err) {
+      showToast('Microphone access denied', true);
+    }
+  }, 500);
+}
+
+async function stopRecording(slotIndex, btn) {
+  clearTimeout(recordingTimer);
+  if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
+
+  mediaRecorder.stop();
+  mediaRecorder.onstop = async () => {
+    const blob = new Blob(recordingChunks, { type: 'audio/webm' });
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      // Ask for label
+      const label = prompt('Name this sound:', `Custom ${slotIndex + 1}`) || `Custom ${slotIndex + 1}`;
+      customSounds[slotIndex] = { label: label.toUpperCase().slice(0, 16), data: e.target.result };
+      await saveCustomSounds();
+      buildSoundboard();
+      showToast(`"${label}" saved! 🎙️`);
+    };
+    reader.readAsDataURL(blob);
+
+    // Stop mic
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    mediaRecorder = null;
+    recordingSlot = null;
+  };
+
+  btn.classList.remove('recording');
 }
 
 // ─────────────────────────────────────────────
@@ -1386,12 +1593,27 @@ function showToast(msg, isError = false) {
   setTimeout(() => t.className = '', 3000);
 }
 
-// Secret delete — hold Shift to reveal delete buttons on thumbnails
+async function deleteCustomSound(e, slotIndex) {
+  e.stopPropagation();
+  if (!confirm('Delete this custom sound?')) return;
+  customSounds[slotIndex] = null;
+  await saveCustomSounds();
+  buildSoundboard();
+  showToast('Sound deleted');
+}
+
+// Secret delete — hold Shift to reveal delete buttons on sound slots
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Shift') document.querySelectorAll('.meme-thumb').forEach(t => t.classList.add('shift-held'));
+  if (e.key === 'Shift') {
+    document.querySelectorAll('.meme-thumb').forEach(t => t.classList.add('shift-held'));
+    document.querySelectorAll('.sound-btn.custom').forEach(t => t.classList.add('shift-held'));
+  }
 });
 document.addEventListener('keyup', (e) => {
-  if (e.key === 'Shift') document.querySelectorAll('.meme-thumb').forEach(t => t.classList.remove('shift-held'));
+  if (e.key === 'Shift') {
+    document.querySelectorAll('.meme-thumb').forEach(t => t.classList.remove('shift-held'));
+    document.querySelectorAll('.sound-btn.custom').forEach(t => t.classList.remove('shift-held'));
+  }
 });
 
 // ─────────────────────────────────────────────
